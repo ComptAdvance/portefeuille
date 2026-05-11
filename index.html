@@ -19,7 +19,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:13
 
 header{
   background:var(--s1);border-bottom:1px solid var(--border);
-  padding:0 32px;height:56px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;height:56px;display:flex;align-items:center;justify-content:space-between;
   position:sticky;top:0;z-index:200;
 }
 .logo{font-family:var(--display);font-size:17px;font-weight:700;letter-spacing:-.5px;color:var(--lime)}
@@ -41,12 +41,12 @@ header{
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
 /* TABS */
-.nav{display:flex;gap:1px;padding:0 32px;background:var(--s1);border-bottom:1px solid var(--border);overflow-x:auto}
+.nav{display:flex;gap:1px;padding:0 20px;background:var(--s1);border-bottom:1px solid var(--border);overflow-x:auto}
 .nav::-webkit-scrollbar{height:2px}.nav::-webkit-scrollbar-thumb{background:var(--border2)}
 .tab{padding:11px 16px;border:none;background:transparent;color:var(--muted2);cursor:pointer;font-family:var(--font);font-size:11px;letter-spacing:.8px;text-transform:uppercase;white-space:nowrap;border-bottom:2px solid transparent;transition:all .2s}
 .tab:hover{color:var(--text)}.tab.active{color:var(--lime);border-bottom-color:var(--lime)}
 
-main{padding:24px 32px;max-width:1600px}
+main{padding:20px 24px;max-width:100%}
 .page{display:none}.page.active{display:block}
 
 /* API KEY BANNER */
@@ -81,13 +81,13 @@ main{padding:24px 32px;max-width:1600px}
 .stag{font-family:var(--font);font-size:10px;font-weight:400;letter-spacing:1px;text-transform:uppercase;border:1px solid var(--border2);padding:2px 7px;border-radius:3px;color:var(--muted2)}
 
 /* TABLE */
-.tw{overflow-x:auto;margin-bottom:22px}
-table{width:100%;border-collapse:collapse}
-thead th{text-align:left;color:var(--muted2);font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:7px 10px;border-bottom:1px solid var(--border);font-weight:400;white-space:nowrap}
-thead th .thf{display:block;font-size:9px;color:var(--muted);font-style:italic;letter-spacing:.3px;text-transform:none;margin-top:1px}
+.tw{overflow-x:auto;margin-bottom:22px;width:100%}
+table{width:100%;border-collapse:collapse;table-layout:auto}
+thead th{text-align:left;color:var(--muted2);font-size:9px;letter-spacing:.8px;text-transform:uppercase;padding:6px 8px;border-bottom:1px solid var(--border);font-weight:400;white-space:nowrap}
+thead th .thf{display:block;font-size:8px;color:var(--muted);font-style:italic;letter-spacing:.2px;text-transform:none;margin-top:1px;white-space:normal;max-width:120px}
 tbody tr{border-bottom:1px solid var(--border);transition:background .15s}
 tbody tr:hover{background:var(--s2)}
-tbody td{padding:12px 10px;vertical-align:middle}
+tbody td{padding:10px 8px;vertical-align:middle;font-size:12px}
 .tk{color:var(--lime);font-weight:500}.tkn{color:var(--muted2);font-size:11px}
 .badge{display:inline-block;padding:2px 6px;border-radius:3px;font-size:10px;letter-spacing:.5px;border:1px solid var(--border);color:var(--muted2)}
 .badge.action{border-color:var(--blue);color:var(--blue)}
@@ -234,7 +234,7 @@ details[open] summary::before{content:'▼ '}
 .last-update{font-size:10px;color:var(--muted);margin-top:4px;text-align:right}
 
 @media(max-width:900px){
-  header,main,.nav{padding-left:14px;padding-right:14px}
+  header,main,.nav{padding-left:10px;padding-right:10px}
   .kpi-strip,.risk-grid,.mc-summary,.div-grid,.fiscal-grid,.bench-layout,.alloc-layout{grid-template-columns:repeat(2,1fr)}
   .sim-layout{grid-template-columns:1fr}
   .fg-5{grid-template-columns:1fr 1fr}
@@ -548,18 +548,26 @@ const YAHOO_MAP = {
   'AXP':  'AXP',        // American Express — NYSE (USD)
   'VUAA': 'VUAA.L',     // Vanguard S&P500 — London Stock Exchange (USD)
   'RHM':  'RHM.DE',     // Rheinmetall — Frankfurt (EUR)
-  'XAG':  'XAGUSD=X',   // Argent — spot (USD/oz)
-  'XAU':  'XAUUSD=X',   // Or — spot (USD/oz)
+  'XAG':  'SI=F',       // Argent futures (USD/oz) — plus fiable que XAGUSD=X
+  'XAU':  'GC=F',       // Or futures (USD/oz) — plus fiable que XAUUSD=X
 };
 
-// Finnhub symboles
+// Yahoo Finance — symboles alternatifs si le premier échoue
+const YAHOO_ALT = {
+  'VUAA': ['VUAA.L','VUAA.MI','0P0001BQGE.L'],
+  'RHM':  ['RHM.DE','RHM.F'],
+  'XAG':  ['SI=F','XAGUSD=X','SLV'],
+  'XAU':  ['GC=F','XAUUSD=X','GLD'],
+};
+
+// Finnhub symboles — plan gratuit compatible
 const FINNHUB_MAP = {
-  'NFLX': 'NFLX',
-  'AXP':  'AXP',
-  'VUAA': 'VUAA',
-  'RHM':  'RHM',
-  'XAG':  'OANDA:XAG_USD',
-  'XAU':  'OANDA:XAU_USD',
+  'NFLX': 'NFLX',       // OK plan gratuit
+  'AXP':  'AXP',        // OK plan gratuit
+  'VUAA': null,          // ETF européen non dispo Finnhub gratuit → Yahoo uniquement
+  'RHM':  'FRA:RHM',    // Bourse de Francfort
+  'XAG':  'OANDA:XAG_USD', // Argent spot
+  'XAU':  'OANDA:XAU_USD', // Or spot
 };
 
 // Taux EUR/USD (fallback statique, mis à jour via API si possible)
@@ -643,56 +651,68 @@ async function fetchEurUsd(){
 // Source 1 : Finnhub (si clé disponible)
 async function fetchFinnhub(ticker){
   if(!finnhubKey) return null;
+  const sym=FINNHUB_MAP[ticker];
+  if(!sym) return null; // symbole non supporté sur Finnhub gratuit
   try{
-    const sym=FINNHUB_MAP[ticker]||ticker;
     const url=`https://finnhub.io/api/v1/quote?symbol=${sym}&token=${finnhubKey}`;
     const r=await fetch(url,{signal:AbortSignal.timeout(6000)});
     if(!r.ok) return null;
     const d=await r.json();
     if(!d.c||d.c===0) return null;
     let price=d.c;
-    const dayChg=d.d||0; // variation absolue du jour
-    const dayPct=d.dp||0; // variation % du jour
-    // Convertir USD→EUR si nécessaire
-    if(isUSD[pf.find(p=>p.ticker===ticker)?.id]){
-      price=price/eurUsdRate;
-    }
-    return{price,dayChg:dayChg/eurUsdRate,dayPct,source:'Finnhub'};
+    const dayChg=d.d||0;
+    const dayPct=d.dp||0;
+    const pfItem=pf.find(p=>p.ticker===ticker);
+    if(pfItem&&isUSD[pfItem.id]) price=price/eurUsdRate;
+    return{price,dayChg:isUSD[pfItem?.id]?dayChg/eurUsdRate:dayChg,dayPct,source:'Finnhub'};
   }catch(e){return null;}
 }
 
-// Source 2 : Yahoo Finance via proxy CORS public
+// Source 2 : Yahoo Finance — essaie le symbole principal puis les alternatifs
+async function fetchYahooSym(sym){
+  const urls=[
+    `https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=1d`,
+    `https://query2.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=1d`,
+  ];
+  for(const url of urls){
+    try{
+      const r=await fetch(url,{signal:AbortSignal.timeout(7000),mode:'cors'});
+      if(!r.ok) continue;
+      const d=await r.json();
+      const meta=d?.chart?.result?.[0]?.meta;
+      if(!meta?.regularMarketPrice||meta.regularMarketPrice===0) continue;
+      let price=meta.regularMarketPrice;
+      const prev=meta.chartPreviousClose||meta.previousClose||price;
+      const dayChg=price-prev;
+      const dayPct=prev>0?(dayChg/prev)*100:0;
+      const currency=(meta.currency||'USD').toUpperCase();
+      const priceEur=currency==='USD'?price/eurUsdRate:price;
+      const dayChgEur=currency==='USD'?dayChg/eurUsdRate:dayChg;
+      return{price:priceEur,dayChg:dayChgEur,dayPct,source:'Yahoo Finance'};
+    }catch(e){continue;}
+  }
+  return null;
+}
+
 async function fetchYahoo(ticker){
-  try{
-    const sym=YAHOO_MAP[ticker]||ticker;
-    const proxies=[
-      `https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=1d`,
-      `https://query2.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=1d`,
-    ];
-    for(const url of proxies){
-      try{
-        const r=await fetch(url,{signal:AbortSignal.timeout(7000),mode:'cors'});
-        if(!r.ok) continue;
-        const d=await r.json();
-        const meta=d?.chart?.result?.[0]?.meta;
-        if(!meta?.regularMarketPrice) continue;
-        let price=meta.regularMarketPrice;
-        const prev=meta.chartPreviousClose||meta.previousClose||price;
-        const dayChg=price-prev;
-        const dayPct=(dayChg/prev)*100;
-        const currency=(meta.currency||'USD').toUpperCase();
-        if(currency==='USD') price=price/eurUsdRate;
-        return{price,dayChg:currency==='USD'?dayChg/eurUsdRate:dayChg,dayPct,source:'Yahoo Finance'};
-      }catch(e){continue;}
-    }
-    return null;
-  }catch(e){return null;}
+  // Essai symbole principal
+  const mainSym=YAHOO_MAP[ticker]||ticker;
+  let res=await fetchYahooSym(mainSym);
+  if(res) return res;
+  // Essai symboles alternatifs
+  const alts=YAHOO_ALT[ticker]||[];
+  for(const sym of alts){
+    if(sym===mainSym) continue;
+    res=await fetchYahooSym(sym);
+    if(res) return res;
+  }
+  return null;
 }
 
 // Source 3 : prix du portefeuille Revolut (fallback)
 function fallbackPrice(ticker){
   const p=pf.find(x=>x.ticker===ticker);
-  return p?{price:p.cours,dayChg:null,dayPct:null,source:'Snapshot Revolut'}:null;
+  return p?{price:p.cours,dayChg:null,dayPct:null,source:'Dernier cours connu'}:null;
 }
 
 async function fetchPrice(ticker){
@@ -750,20 +770,24 @@ async function refreshPrices(){
   });
 
   const srcList=[...sources].join(' + ');
-  const hasLive=![...sources].every(s=>s==='Snapshot Revolut'||s==='Snapshot');
+  const hasLive=![...sources].every(s=>s==='Dernier cours connu');
 
-  setBadge(hasLive?'ok':'err', hasLive?`En direct · ${srcList}`:`Snapshot · ${errors} erreur(s)`);
+  setBadge(hasLive?'ok':'err', hasLive?`En direct · ${srcList}`:`Données locales · ${errors} source(s) indisponible(s)`);
 
   const now=new Date();
-  document.getElementById('lastUpdate').textContent=
-    `Dernière mise à jour : ${now.toLocaleTimeString('fr-FR')} — Source : ${srcList}`;
+  const srcDisplay=[...sources].map(s=>{
+    if(s==='Finnhub') return '● Finnhub (temps réel)';
+    if(s==='Yahoo Finance') return '● Yahoo Finance (~15 min)';
+    return '○ Dernier cours connu';
+  }).join(' + ');
+  document.getElementById('lastUpdate').textContent=`Dernière mise à jour : ${now.toLocaleTimeString('fr-FR')} — ${srcDisplay}`;
 
   const note=document.getElementById('priceSourceNote');
   if(hasLive){
     note.innerHTML=`✅ <strong>Cours en direct</strong> via ${srcList}. Délai : ~15–20 min (hors heures de marché : cours de clôture). Taux EUR/USD utilisé : <strong>${N2(eurUsdRate,4)}</strong>.`;
     note.className='note';
   } else {
-    note.innerHTML=`⚠️ <strong>Connexion API impossible</strong> — Les cours affichés sont ceux de la capture Revolut du 09/05/2025. Vérifie ta connexion ou ajoute une clé Finnhub gratuite.`;
+    note.innerHTML=`⚠️ <strong>Source indisponible</strong> — Les cours affichés sont les derniers cours connus. Vérifie ta connexion internet ou ajoute une clé Finnhub gratuite.`;
     note.className='note warn';
   }
 
@@ -823,18 +847,19 @@ function renderTable(id,items,tv){
     const dayHtml=p.dayChange!=null
       ?`<span class="${p.dayChange>=0?'pos':'neg'}" style="font-size:10px">${p.dayChange>=0?'+':''}${N2(p.dayChange,2)}%</span>`
       :`<span style="color:var(--muted);font-size:10px">—</span>`;
+    const srcIcon=p.priceSource==='Finnhub'?'<span style="color:var(--teal);font-size:9px">● FH</span>':p.priceSource==='Yahoo Finance'?'<span style="color:var(--blue);font-size:9px">● YF</span>':'<span style="color:var(--muted);font-size:9px">○ local</span>';
     return`<tr>
-      <td><div class="tk">${p.ticker}</div><div class="tkn">${p.name}</div></td>
+      <td style="min-width:90px"><div class="tk">${p.ticker}</div><div class="tkn" style="font-size:10px;max-width:110px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name}</div></td>
       <td><span class="badge ${c.cl}">${c.label}</span></td>
-      <td>${N2(p.qty,qd)}</td>
-      <td>${N2(p.pru,2)} €</td>
-      <td><div class="cours-cell"><span class="cours-live">${N2(p.cours,2)} €</span><span class="cours-change">${p.priceSource?`<span style="color:var(--muted);font-size:9px">${p.priceSource}</span>`:''}</span></div></td>
-      <td>${dayHtml}</td>
-      <td>${N2(i,2)} €</td>
-      <td><strong>${N2(v,2)} €</strong></td>
-      <td class="${cl}">${n>=0?'+':''}${N2(n,2)} €</td>
-      <td><span class="perf ${n>=0?'up':'dn'}">${n>=0?'▲':'▼'} ${N2(Math.abs(pc),2)}%</span></td>
-      <td><div class="wbar">${N2(w,1)}%<div class="bar"><div class="bf" style="width:${w}%;background:${c.hex}"></div></div></div></td>
+      <td style="text-align:right">${N2(p.qty,qd)}</td>
+      <td style="text-align:right">${N2(p.pru,2)} €</td>
+      <td style="text-align:right"><div class="cours-cell"><span class="cours-live">${N2(p.cours,2)} €</span><span>${srcIcon}</span></div></td>
+      <td style="text-align:center">${dayHtml}</td>
+      <td style="text-align:right">${N2(i,2)} €</td>
+      <td style="text-align:right"><strong>${N2(v,2)} €</strong></td>
+      <td style="text-align:right" class="${cl}">${n>=0?'+':''}${N2(n,2)} €</td>
+      <td style="text-align:center"><span class="perf ${n>=0?'up':'dn'}">${n>=0?'▲':'▼'} ${N2(Math.abs(pc),2)}%</span></td>
+      <td><div class="wbar" style="min-width:80px">${N2(w,1)}%<div class="bar" style="flex:1"><div class="bf" style="width:${w}%;background:${c.hex}"></div></div></div></td>
       <td><button class="btn btn-ghost btn-sm" onclick="del(${p.id})">×</button></td>
     </tr>`;
   }).join('');

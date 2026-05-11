@@ -273,16 +273,35 @@ details[open] summary::before{content:'▼ '}
 <div id="page-portefeuille" class="page active">
 
   <!-- API KEY BANNER -->
-  <div class="api-banner" id="apiBanner">
-    <div class="api-banner-text">
-      <strong>🔑 Clé API Finnhub (optionnelle mais recommandée)</strong>
-      <span>Sans clé : cours via proxy public Yahoo (peut être lent ou bloqué). <br>
-      Avec clé Finnhub gratuite : cours en temps réel garantis. 
-      <a href="https://finnhub.io/register" target="_blank" style="color:var(--blue)">Créer un compte gratuit →</a> (30 secondes, aucune CB requise)</span>
-    </div>
-    <div class="api-input-row">
-      <input class="api-input" id="apiKeyInput" placeholder="Coller ta clé Finnhub ici…" type="password">
-      <button class="btn btn-lime" onclick="saveApiKey()">Enregistrer</button>
+  <div class="api-banner" id="apiBanner" style="flex-direction:column;gap:10px">
+    <div style="font-family:var(--display);font-size:12px;font-weight:600;color:var(--lime);letter-spacing:1px;text-transform:uppercase">🔑 Clés API — Configuration des sources de données en direct</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;width:100%">
+      <!-- Finnhub -->
+      <div style="background:var(--s3);border:1px solid var(--border2);border-radius:6px;padding:12px">
+        <div style="font-size:11px;font-weight:600;color:var(--teal);margin-bottom:4px">● Finnhub — Actions (NFLX, AXP, RHM)</div>
+        <div style="font-size:10px;color:var(--muted2);margin-bottom:8px">Gratuit · Temps réel · <a href="https://finnhub.io/register" target="_blank" style="color:var(--blue)">Créer un compte →</a></div>
+        <div style="display:flex;gap:6px">
+          <input class="api-input" id="apiKeyFinnhub" placeholder="Clé Finnhub…" type="password" style="flex:1;font-size:11px;padding:5px 8px">
+          <button class="btn btn-lime" onclick="saveKey('finnhub')" style="padding:5px 10px;font-size:10px">OK</button>
+        </div>
+        <div id="fhStatus" style="font-size:10px;margin-top:4px;color:var(--muted)"></div>
+      </div>
+      <!-- Metals.dev -->
+      <div style="background:var(--s3);border:1px solid var(--border2);border-radius:6px;padding:12px">
+        <div style="font-size:11px;font-weight:600;color:var(--gold);margin-bottom:4px">● Metals.dev — Or (XAU) & Argent (XAG)</div>
+        <div style="font-size:10px;color:var(--muted2);margin-bottom:8px">Gratuit · 100 req/mois · <a href="https://metals.dev" target="_blank" style="color:var(--blue)">Créer un compte →</a></div>
+        <div style="display:flex;gap:6px">
+          <input class="api-input" id="apiKeyMetals" placeholder="Clé Metals.dev…" type="password" style="flex:1;font-size:11px;padding:5px 8px">
+          <button class="btn btn-lime" onclick="saveKey('metals')" style="padding:5px 10px;font-size:10px">OK</button>
+        </div>
+        <div id="mdStatus" style="font-size:10px;margin-top:4px;color:var(--muted)"></div>
+      </div>
+      <!-- VUAA info -->
+      <div style="background:var(--s3);border:1px solid var(--border2);border-radius:6px;padding:12px">
+        <div style="font-size:11px;font-weight:600;color:var(--lime);margin-bottom:4px">● Yahoo Finance — VUAA (ETF)</div>
+        <div style="font-size:10px;color:var(--muted2);margin-bottom:8px">Automatique · Aucune clé requise · délai ~15 min</div>
+        <div style="font-size:10px;color:var(--muted2);margin-top:8px">VUAA est un ETF européen coté sur Euronext Amsterdam. Yahoo Finance le récupère automatiquement via le symbole <strong style="color:var(--lime)">VUAA.AS</strong>.</div>
+      </div>
     </div>
   </div>
 
@@ -541,52 +560,59 @@ details[open] summary::before{content:'▼ '}
 // CONFIGURATION PRIX EN TEMPS RÉEL
 // ═══════════════════════════════════════════════════
 
-// Mapping ticker → symboles API
-// Yahoo Finance symboles (avec suffixe de bourse si nécessaire)
-const YAHOO_MAP = {
-  'NFLX': 'NFLX',       // Netflix — NASDAQ (USD)
-  'AXP':  'AXP',        // American Express — NYSE (USD)
-  'VUAA': 'VUAA.L',     // Vanguard S&P500 — London Stock Exchange (USD)
-  'RHM':  'RHM.DE',     // Rheinmetall — Frankfurt (EUR)
-  'XAG':  'SI=F',       // Argent futures (USD/oz) — plus fiable que XAGUSD=X
-  'XAU':  'GC=F',       // Or futures (USD/oz) — plus fiable que XAUUSD=X
-};
+// ═══════════════════════════════════════════════════
+// CONFIGURATION APIS — 3 sources spécialisées
+// ═══════════════════════════════════════════════════
 
-// Yahoo Finance — symboles alternatifs si le premier échoue
-const YAHOO_ALT = {
-  'VUAA': ['VUAA.L','VUAA.MI','0P0001BQGE.L'],
-  'RHM':  ['RHM.DE','RHM.F'],
-  'XAG':  ['SI=F','XAGUSD=X','SLV'],
-  'XAU':  ['GC=F','XAUUSD=X','GLD'],
-};
+// SOURCE A : Finnhub → NFLX, AXP, RHM (actions cotées USA/EU)
+// SOURCE B : Metals.dev → XAU (Or), XAG (Argent) en temps réel
+// SOURCE C : Yahoo Finance → VUAA.AS (ETF Euronext Amsterdam)
 
-// Finnhub symboles — plan gratuit compatible
 const FINNHUB_MAP = {
-  'NFLX': 'NFLX',       // OK plan gratuit
-  'AXP':  'AXP',        // OK plan gratuit
-  'VUAA': null,          // ETF européen non dispo Finnhub gratuit → Yahoo uniquement
-  'RHM':  'FRA:RHM',    // Bourse de Francfort
-  'XAG':  'OANDA:XAG_USD', // Argent spot
-  'XAU':  'OANDA:XAU_USD', // Or spot
+  'NFLX': 'NFLX',
+  'AXP':  'AXP',
+  'RHM':  'FRA:RHM',
 };
 
-// Taux EUR/USD (fallback statique, mis à jour via API si possible)
-let eurUsdRate = 1.08;
+const YAHOO_MAP = {
+  'VUAA': ['VUAA.AS','VUAA.L','VUAA.DE'], // Euronext Amsterdam en premier (EUR direct)
+};
 
-// Clé API Finnhub (stockée localement)
-let finnhubKey = localStorage.getItem('finnhub_key') || '';
-if (finnhubKey) {
-  document.getElementById('apiKeyInput').value = '••••••••••••••••';
-  document.getElementById('apiBanner').className = 'api-banner ok';
+// Taux EUR/USD
+let eurUsdRate = 1.09;
+
+// Clés API
+let finnhubKey  = localStorage.getItem('fh_key')  || '';
+let metalsKey   = localStorage.getItem('md_key')  || '';
+
+// Init affichage clés
+function initKeyDisplay() {
+  if (finnhubKey) {
+    document.getElementById('apiKeyFinnhub').value = '••••••••••••••';
+    document.getElementById('fhStatus').innerHTML = '<span style="color:var(--teal)">✓ Clé enregistrée</span>';
+  }
+  if (metalsKey) {
+    document.getElementById('apiKeyMetals').value = '••••••••••••••';
+    document.getElementById('mdStatus').innerHTML = '<span style="color:var(--teal)">✓ Clé enregistrée</span>';
+  }
 }
 
-function saveApiKey() {
-  const k = document.getElementById('apiKeyInput').value.trim();
-  if (!k || k.startsWith('•')) return;
-  finnhubKey = k;
-  localStorage.setItem('finnhub_key', k);
-  document.getElementById('apiBanner').className = 'api-banner ok';
-  document.getElementById('apiKeyInput').value = '••••••••••••••••';
+function saveKey(type) {
+  if (type === 'finnhub') {
+    const k = document.getElementById('apiKeyFinnhub').value.trim();
+    if (!k || k.startsWith('•')) return;
+    finnhubKey = k;
+    localStorage.setItem('fh_key', k);
+    document.getElementById('apiKeyFinnhub').value = '••••••••••••••';
+    document.getElementById('fhStatus').innerHTML = '<span style="color:var(--teal)">✓ Clé enregistrée</span>';
+  } else {
+    const k = document.getElementById('apiKeyMetals').value.trim();
+    if (!k || k.startsWith('•')) return;
+    metalsKey = k;
+    localStorage.setItem('md_key', k);
+    document.getElementById('apiKeyMetals').value = '••••••••••••••';
+    document.getElementById('mdStatus').innerHTML = '<span style="color:var(--teal)">✓ Clé enregistrée</span>';
+  }
   refreshPrices();
 }
 
@@ -648,44 +674,72 @@ async function fetchEurUsd(){
   }catch(e){}
 }
 
-// Source 1 : Finnhub (si clé disponible)
+// ── SOURCE A : Finnhub → NFLX, AXP, RHM ──────────────────────────────
 async function fetchFinnhub(ticker){
   if(!finnhubKey) return null;
   const sym=FINNHUB_MAP[ticker];
-  if(!sym) return null; // symbole non supporté sur Finnhub gratuit
+  if(!sym) return null;
   try{
-    const url=`https://finnhub.io/api/v1/quote?symbol=${sym}&token=${finnhubKey}`;
-    const r=await fetch(url,{signal:AbortSignal.timeout(6000)});
+    const r=await fetch(`https://finnhub.io/api/v1/quote?symbol=${sym}&token=${finnhubKey}`,{signal:AbortSignal.timeout(7000)});
     if(!r.ok) return null;
     const d=await r.json();
     if(!d.c||d.c===0) return null;
-    let price=d.c;
-    const dayChg=d.d||0;
-    const dayPct=d.dp||0;
     const pfItem=pf.find(p=>p.ticker===ticker);
-    if(pfItem&&isUSD[pfItem.id]) price=price/eurUsdRate;
-    return{price,dayChg:isUSD[pfItem?.id]?dayChg/eurUsdRate:dayChg,dayPct,source:'Finnhub'};
+    const inUsd=pfItem?isUSD[pfItem.id]:true;
+    const price=inUsd?d.c/eurUsdRate:d.c;
+    const dayChg=inUsd?(d.d||0)/eurUsdRate:(d.d||0);
+    return{price,dayChg,dayPct:d.dp||0,source:'Finnhub'};
   }catch(e){return null;}
 }
 
-// Source 2 : Yahoo Finance — essaie le symbole principal puis les alternatifs
+// ── SOURCE B : Metals.dev → XAU (Or), XAG (Argent) ───────────────────
+async function fetchMetals(ticker){
+  if(!metalsKey) return null;
+  if(ticker!=='XAU'&&ticker!=='XAG') return null;
+  const sym=ticker==='XAU'?'XAU':'XAG';
+  try{
+    const r=await fetch(`https://api.metals.dev/v1/metal/spot?metal=${sym}&currency=EUR&api_key=${metalsKey}`,{signal:AbortSignal.timeout(7000)});
+    if(!r.ok) return null;
+    const d=await r.json();
+    // Metals.dev retourne price en EUR/oz directement
+    const price=d?.metal?.price;
+    if(!price||price===0) return null;
+    const prev=d?.metal?.prev_close_price||price;
+    const dayChg=price-prev;
+    const dayPct=prev>0?(dayChg/prev)*100:0;
+    return{price,dayChg,dayPct,source:'Metals.dev'};
+  }catch(e){return null;}
+}
+
+// ── SOURCE B2 : Fallback métaux via Finnhub OANDA ─────────────────────
+async function fetchMetalsFinnhub(ticker){
+  if(!finnhubKey) return null;
+  if(ticker!=='XAU'&&ticker!=='XAG') return null;
+  const sym=ticker==='XAU'?'OANDA:XAU_USD':'OANDA:XAG_USD';
+  try{
+    const r=await fetch(`https://finnhub.io/api/v1/quote?symbol=${sym}&token=${finnhubKey}`,{signal:AbortSignal.timeout(7000)});
+    if(!r.ok) return null;
+    const d=await r.json();
+    if(!d.c||d.c===0) return null;
+    return{price:d.c/eurUsdRate,dayChg:(d.d||0)/eurUsdRate,dayPct:d.dp||0,source:'Finnhub (métaux)'};
+  }catch(e){return null;}
+}
+
+// ── SOURCE C : Yahoo Finance → VUAA (ETF Euronext) ────────────────────
 async function fetchYahooSym(sym){
-  const urls=[
-    `https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=1d`,
-    `https://query2.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=1d`,
-  ];
-  for(const url of urls){
+  for(const base of ['https://query1.finance.yahoo.com','https://query2.finance.yahoo.com']){
     try{
-      const r=await fetch(url,{signal:AbortSignal.timeout(7000),mode:'cors'});
+      const r=await fetch(`${base}/v8/finance/chart/${sym}?interval=1d&range=1d`,{signal:AbortSignal.timeout(8000)});
       if(!r.ok) continue;
       const d=await r.json();
       const meta=d?.chart?.result?.[0]?.meta;
       if(!meta?.regularMarketPrice||meta.regularMarketPrice===0) continue;
-      let price=meta.regularMarketPrice;
-      const prev=meta.chartPreviousClose||meta.previousClose||price;
+      const price=meta.regularMarketPrice;
+      const prev=meta.chartPreviousClose||meta.regularMarketPreviousClose||price;
       const dayChg=price-prev;
       const dayPct=prev>0?(dayChg/prev)*100:0;
-      const currency=(meta.currency||'USD').toUpperCase();
+      const currency=(meta.currency||'EUR').toUpperCase();
+      // VUAA.AS est coté en EUR → pas de conversion
       const priceEur=currency==='USD'?price/eurUsdRate:price;
       const dayChgEur=currency==='USD'?dayChg/eurUsdRate:dayChg;
       return{price:priceEur,dayChg:dayChgEur,dayPct,source:'Yahoo Finance'};
@@ -695,35 +749,33 @@ async function fetchYahooSym(sym){
 }
 
 async function fetchYahoo(ticker){
-  // Essai symbole principal
-  const mainSym=YAHOO_MAP[ticker]||ticker;
-  let res=await fetchYahooSym(mainSym);
-  if(res) return res;
-  // Essai symboles alternatifs
-  const alts=YAHOO_ALT[ticker]||[];
-  for(const sym of alts){
-    if(sym===mainSym) continue;
-    res=await fetchYahooSym(sym);
+  const syms=YAHOO_MAP[ticker]||[ticker];
+  for(const sym of syms){
+    const res=await fetchYahooSym(sym);
     if(res) return res;
   }
   return null;
 }
 
-// Source 3 : prix du portefeuille Revolut (fallback)
+// ── ROUTEUR PRINCIPAL ─────────────────────────────────────────────────
+async function fetchPrice(ticker){
+  // Métaux → Metals.dev en priorité, fallback Finnhub OANDA
+  if(ticker==='XAU'||ticker==='XAG'){
+    return (await fetchMetals(ticker))
+        || (await fetchMetalsFinnhub(ticker))
+        || fallbackPrice(ticker);
+  }
+  // VUAA → Yahoo Finance uniquement
+  if(ticker==='VUAA'){
+    return (await fetchYahoo(ticker)) || fallbackPrice(ticker);
+  }
+  // Actions → Finnhub en priorité
+  return (await fetchFinnhub(ticker)) || fallbackPrice(ticker);
+}
+
 function fallbackPrice(ticker){
   const p=pf.find(x=>x.ticker===ticker);
   return p?{price:p.cours,dayChg:null,dayPct:null,source:'Dernier cours connu'}:null;
-}
-
-async function fetchPrice(ticker){
-  // Essai Finnhub en priorité
-  let res=await fetchFinnhub(ticker);
-  if(res) return res;
-  // Essai Yahoo Finance
-  res=await fetchYahoo(ticker);
-  if(res) return res;
-  // Fallback snapshot
-  return fallbackPrice(ticker);
 }
 
 let priceSourceUsed='';
@@ -770,7 +822,7 @@ async function refreshPrices(){
   });
 
   const srcList=[...sources].join(' + ');
-  const hasLive=![...sources].every(s=>s==='Dernier cours connu');
+  const hasLive=[...sources].some(s=>s!=='Dernier cours connu');
 
   setBadge(hasLive?'ok':'err', hasLive?`En direct · ${srcList}`:`Données locales · ${errors} source(s) indisponible(s)`);
 
@@ -778,6 +830,8 @@ async function refreshPrices(){
   const srcDisplay=[...sources].map(s=>{
     if(s==='Finnhub') return '● Finnhub (temps réel)';
     if(s==='Yahoo Finance') return '● Yahoo Finance (~15 min)';
+    if(s==='Metals.dev') return '● Metals.dev (temps réel)';
+    if(s==='Finnhub (métaux)') return '● Finnhub OANDA (métaux)';
     return '○ Dernier cours connu';
   }).join(' + ');
   document.getElementById('lastUpdate').textContent=`Dernière mise à jour : ${now.toLocaleTimeString('fr-FR')} — ${srcDisplay}`;
@@ -847,7 +901,7 @@ function renderTable(id,items,tv){
     const dayHtml=p.dayChange!=null
       ?`<span class="${p.dayChange>=0?'pos':'neg'}" style="font-size:10px">${p.dayChange>=0?'+':''}${N2(p.dayChange,2)}%</span>`
       :`<span style="color:var(--muted);font-size:10px">—</span>`;
-    const srcIcon=p.priceSource==='Finnhub'?'<span style="color:var(--teal);font-size:9px">● FH</span>':p.priceSource==='Yahoo Finance'?'<span style="color:var(--blue);font-size:9px">● YF</span>':'<span style="color:var(--muted);font-size:9px">○ local</span>';
+    const srcIcon=p.priceSource==='Finnhub'?'<span style="color:var(--teal);font-size:9px">● Finnhub</span>':p.priceSource==='Yahoo Finance'?'<span style="color:var(--blue);font-size:9px">● Yahoo</span>':p.priceSource==='Metals.dev'?'<span style="color:var(--gold);font-size:9px">● Metals.dev</span>':p.priceSource==='Finnhub (métaux)'?'<span style="color:var(--teal);font-size:9px">● FH Metals</span>':'<span style="color:var(--muted);font-size:9px">○ local</span>';
     return`<tr>
       <td style="min-width:90px"><div class="tk">${p.ticker}</div><div class="tkn" style="font-size:10px;max-width:110px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name}</div></td>
       <td><span class="badge ${c.cl}">${c.label}</span></td>
@@ -1148,6 +1202,7 @@ function delVersement(date,montant,note){const idx=versements.findIndex(v=>v.dat
 render();
 updateSim();
 buildDivSelect();
+initKeyDisplay();
 
 // Premier chargement des cours
 refreshPrices();
